@@ -1,0 +1,90 @@
+:Author: mbolding
+:Email: mark.bolding@gmail.com
+:Date: 25/01/2018
+:Revision: version#
+:License: Public Domain
+
+= Project: {Project}
+
+The Arduino Uno is based on an ATmega382P microcontroller. This chip has two 8-bit timers, driving two PWM channels each, and one 16-bit timer, driving the last two channels.
+You cannot increase the resolution of the 8-bit timers. You can, however, put the 16-bit timer in 16-bit mode, instead of the 8-bit mode used by the Arduino core library. This will give you two 16-bit PWM channels, with a reduced frequency of 244 Hz (maximum). You will probably have to configure the timer yourself, and will not benefit from the easy to use analogWrite() function. For details, see the section on Timer 1 in in the ATmega328P datasheet.
+Update: Here is an implementation of a 16-bit analogWrite(). It only works on pins 9 and 10, as these are the only pins connected to the 16-bit timer.
+/* Configure digital pins 9 and 10 as 16-bit PWM outputs. */
+void setupPWM16() {
+    DDRB |= _BV(PB1) | _BV(PB2);        /* set pins as outputs */
+    TCCR1A = _BV(COM1A1) | _BV(COM1B1)  /* non-inverting PWM */
+        | _BV(WGM11);                   /* mode 14: fast PWM, TOP=ICR1 */
+    TCCR1B = _BV(WGM13) | _BV(WGM12)
+        | _BV(CS10);                    /* no prescaling */
+    ICR1 = 0xffff;                      /* TOP counter value */
+}
+
+/* 16-bit version of analogWrite(). Works only on pins 9 and 10. */
+void analogWrite16(uint8_t pin, uint16_t val)
+{
+    switch (pin) {
+        case  9: OCR1A = val; break;
+        case 10: OCR1B = val; break;
+    }
+}
+You may notice that the top of the counter sequence is configured explicitly. You can change this to a smaller value to make the PWM faster, at the cost of decreased resolution.
+And here is an example sketch illustrating its use:
+void setup() {
+    setupPWM16();
+}
+
+/* Test: send very slow sawtooth waves. */
+void loop() {
+    static uint16_t i;
+    analogWrite16(9, i);
+    analogWrite16(10, 0xffff - i);
+    i++;
+    delay(1);
+}
+
+== Step 1: Installation
+Please describe the steps to install this project.
+
+For example:
+
+1. Open this file
+2. Edit as you like
+3. Release to the World!
+
+== Step 2: Assemble the circuit
+
+plug one PWM output into pin 9 and the other into pin 10
+
+== Step 3: Load the code
+
+Upload the code contained in this sketch on to your board
+
+=== Folder structure
+
+....
+ sketch123                => Arduino sketch folder
+  ├── sketch123.ino       => main Arduino file
+  ├── schematics.png      => (optional) an image of the required schematics
+  ├── layout.png          => (optional) an image of the layout
+  └── ReadMe.adoc         => this file
+....
+
+=== License
+This project is released under a {License} License.
+
+=== Contributing
+To contribute to this project please contact mbolding <mark.bolding@gmail.com>
+
+=== BOM
+Add the bill of the materials you need for this project.
+
+|===
+| ID | Part name      | Part number | Quantity
+| A1 | Arduino Uno    |             | 1        
+|===
+
+
+=== Help
+This document is written in the _AsciiDoc_ format, a markup language to describe documents. 
+If you need help you can search the http://www.methods.co.nz/asciidoc[AsciiDoc homepage]
+or consult the http://powerman.name/doc/asciidoc[AsciiDoc cheatsheet]

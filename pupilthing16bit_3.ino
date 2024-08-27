@@ -1,0 +1,94 @@
+/*
+
+16 bit PWM with arduino. 
+ripped from 
+https://arduino.stackexchange.com/questions/12718/increase-pwm-bit-resolution
+
+*/
+
+/* Configure digital pins 9 and 10 as 16-bit PWM outputs. */
+void setupPWM16() {
+    DDRB |= _BV(PB1) | _BV(PB2);        /* set pins as outputs */
+    TCCR1A = _BV(COM1A1) | _BV(COM1B1)  /* non-inverting PWM */
+        | _BV(WGM11);                   /* mode 14: fast PWM, TOP=ICR1 */
+    TCCR1B = _BV(WGM13) | _BV(WGM12)
+        | _BV(CS10);                    /* no prescaling */
+    ICR1 = 0xffff;                      /* TOP counter value */
+}
+
+
+
+/* 16-bit version of analogWrite(). Works only on pins 9 and 10. */
+void analogWrite16(uint8_t pin, uint16_t val)
+{
+    switch (pin) {
+        case  9: OCR1A = val; break;
+        case 10: OCR1B = val; break;
+    }
+}
+
+void setup() {
+    // initialize the 16 bit PWM counter out
+    setupPWM16();
+    // initialize digital pin LED_BUILTIN as an output.
+    pinMode(LED_BUILTIN, OUTPUT);
+    // initialize serial:
+    Serial.begin(9600);
+
+}
+
+
+void loop() {
+    int preDelay = 0;
+    int PWMduty9 = 0;
+    int PWMduty10 = 0;
+    int stimDuration = 0;
+    int postDelay = 0;
+    analogWrite16(9, 0xffff - 0);                // zero the pwm
+    analogWrite16(10, 0xffff - 0);
+    digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on (HIGH is the voltage level)
+    while (Serial.available() == 0) {    // wait for serial input
+      delay(1);
+    }
+    digitalWrite(LED_BUILTIN, LOW);  // turn the LED off by making the voltage LOW
+    while (Serial.available() > 0) {    // get four integers and send them back
+      // look for the next valid integers in the incoming serial stream:
+      preDelay = Serial.parseInt();  
+      PWMduty9 = Serial.parseInt();
+      PWMduty10 = Serial.parseInt();
+      stimDuration = Serial.parseInt();
+      postDelay = Serial.parseInt();
+      // look for the newline. That's the end of your sentence:
+      if (Serial.read() == '\n') {
+      }
+    }
+    
+    delay(500);
+    digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
+    delay(100);                       // wait for a 5/10 second
+    digitalWrite(LED_BUILTIN, LOW);   // turn the LED off by making the voltage LOW
+    delay(preDelay - 600);                  // delay before stimulus
+    
+    analogWrite16(9,  0xffff - PWMduty9);
+    analogWrite16(10, 0xffff - PWMduty10);
+    delay(stimDuration);              // stimulus duration
+        
+    analogWrite16(9, 0xffff - 0);     // zero the pwm
+    analogWrite16(10, 0xffff - 0);
+    digitalWrite(LED_BUILTIN, HIGH);   
+    delay(postDelay);                 // post stimulus delay
+    
+    // print the number in one string:
+    Serial.print(preDelay);
+    Serial.print("\n");
+    Serial.print(PWMduty9);
+    Serial.print("\n");
+    Serial.print(PWMduty10);
+    Serial.print("\n");
+    Serial.print(stimDuration);
+    Serial.print("\n");
+    Serial.print(postDelay);
+    Serial.print("\n");
+    delay(100);
+    
+}
